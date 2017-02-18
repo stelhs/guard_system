@@ -14,7 +14,7 @@ type Nmea0183 struct {
 type Nmea_msg struct {
 	Ti string
 	Si string
-	Args []uint
+	Args []int
 }
 
 // Constructor of Nmea0183 transiver
@@ -59,7 +59,7 @@ func (t *Nmea0183) parse() *Nmea_msg {
     		continue
     	}
     	
-    	var arg uint
+    	var arg int
     	fmt.Sscanf(v, "%d", &arg)
     	msg.Args = append(msg.Args, arg)
     }
@@ -105,7 +105,7 @@ func (t *Nmea0183) Push_rxb(rxb byte) *Nmea_msg {
 
 
 // Create nmea0183's text message from ti,si,args components 
-func (t *Nmea0183) Create_msg(ti string, si string, args []uint) string {
+func (t *Nmea0183) Create_msg(ti string, si string, args []int) string {
 	msg := make([]byte, 0, 64)
 	msg = []byte(fmt.Sprintf("$%s%s", ti, si))
 	for _, arg := range args {

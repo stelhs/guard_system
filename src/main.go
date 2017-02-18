@@ -2,70 +2,53 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"mod_io"
 	"huawei_e303"
-	"time"
+	"guard_system"
+    "database/sql"
+    _ "github.com/go-sql-driver/mysql"
 )
 
 const (
 	DEV_FILE = "/dev/ttyS0"
+	MODEM_IP = "192.168.1.1"
 )
+
+
 
 func main() {
 	var err error
-	var text string
 	
-	m := huawei_e303.New("192.168.1.1")
-	fmt.Println(m)
-//	err := m.Send_sms("+375295051024", "bla bla")
-	stat, err := m.Get_traffic_statistics()
-	fmt.Printf("Modem error: %v\n", err)
-	fmt.Printf("stat: %v\n", stat)
-	return
-	
-	sms_list, err := m.Check_for_new_sms()
-	fmt.Printf("Modem error: %v\n", err)
-	fmt.Printf("count SMS: %d\n", len(sms_list))
-	fmt.Printf("SMS list: %v\n", sms_list)
-	
-	for _, sms := range sms_list {
-		fmt.Println("sms index = ", sms.Index)
-		m.Remove_sms(sms.Index)
-	}
-	return
-	
-	
-	err = m.Send_ussd("*100#")
-	if err != nil {
-		fmt.Printf("Modem error: %v\n", err)
-	}
-	
-	text, err = m.Check_for_new_ussd()
-	fmt.Println("check for ussd: ", text)
-	time.Sleep(time.Second * 5)
-	text, err = m.Check_for_new_ussd()
-	fmt.Println("check for ussd: ", text)
-	return
+    db, err := sql.Open("mysql", "root:13941@/guard_system")
+    if err != nil {
+        panic(fmt.Sprintf("main: can't open mysql connection: %v", err))
+    }
+	defer db.Close()	
 
+	modem := huawei_e303.New(MODEM_IP)
 	mio, err := mod_io.New(DEV_FILE)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return
+		panic(fmt.Sprintf("main: can't create mod_io: %v", err))
 	}
 	
-	go mio.Receiver_thread()
-	go mio.Transmitter_thread()
+	gs := guard_system.New(db, mio, modem)
+	if err != nil {
+		panic(fmt.Sprintf("main: can't create guard_system: %v", err))
+	}
+	
+	fmt.Println("set GS to ready")
+	
+	gs.Guard_start("sms")
+	
 	for {
-		msg := mio.Recv("", 0)
+		msg := mio.Recv("AIP", 0)
 		fmt.Println("recv msg = ", msg)
 		if msg == nil {
 			continue
 		}
 		
 		if msg.Si == "AIP" {
-			mio.Relay_set_state(3, msg.Args[1])
-//			mio.Send_cmd("PC", "RWS", []uint{3, msg.Args[1]})
+			gs.Set_relay_state(3, msg.Args[1])
 		}
 	}
 }

@@ -1,13 +1,13 @@
 package mod_io
 
 import (
-	"fmt"
 	"nmea0183"
 	"os"
 	"os/exec"
 	"container/list"
 	"sync"
 	"time"
+//	"fmt"
 )
 
 type Mod_io struct {
@@ -40,6 +40,8 @@ func New(dev_file string) (*Mod_io, error) {
 		return nil, err
 	}
 	
+	go mio.Receiver_thread()
+	go mio.Transmitter_thread()
 	return mio, err
 }
 
@@ -79,7 +81,6 @@ func (mio *Mod_io) Transmitter_thread() {
 		count = 0
 		for count < len(msg) {
 			var err error
-			fmt.Println("send", msg)
 			count, err = mio.dev.Write([]byte(msg))
 			if err != nil {
 				panic("Can't write to UART")
@@ -89,15 +90,15 @@ func (mio *Mod_io) Transmitter_thread() {
 }
 
 // Send nmea0183 message to transmitter
-func (mio *Mod_io) Send_cmd(ti string, si string, args []uint) {
+func (mio *Mod_io) Send_cmd(ti string, si string, args []int) {
 	msg := mio.nmea.Create_msg(ti, si, args)
 	mio.tx <- msg
 }
 
 // Set outport new state 
-func (mio *Mod_io) Relay_set_state(port_num uint, state uint) {
+func (mio *Mod_io) Relay_set_state(port_num int, state int) {
 	for cnt := 0; cnt < 3; cnt++ {
-		mio.Send_cmd("PC", "RWS", []uint{port_num, state})
+		mio.Send_cmd("PC", "RWS", []int{port_num, state})
 		msg := mio.Recv("SOP", 300)
 		if msg == nil {
 			continue
@@ -118,9 +119,9 @@ func (mio *Mod_io) Relay_set_state(port_num uint, state uint) {
 
 
 // Get input port state
-func (mio *Mod_io) Get_input_port_state(port_num uint) uint {
+func (mio *Mod_io) Get_input_port_state(port_num int) int {
 	for cnt := 0; cnt < 3; cnt++ {
-		mio.Send_cmd("PC", "RIP", []uint{port_num})
+		mio.Send_cmd("PC", "RIP", []int{port_num})
 		msg := mio.Recv("AIP", 300)
 		if msg == nil {
 			continue
@@ -138,9 +139,9 @@ func (mio *Mod_io) Get_input_port_state(port_num uint) uint {
 
 
 // Set WDT state
-func (mio *Mod_io) Wdt_set_state(state uint) {
+func (mio *Mod_io) Wdt_set_state(state int) {
 	for cnt := 0; cnt < 3; cnt++ {
-		mio.Send_cmd("PC", "WDC", []uint{state})
+		mio.Send_cmd("PC", "WDC", []int{state})
 		msg := mio.Recv("WDS", 300)
 		if msg == nil {
 			continue
@@ -157,8 +158,8 @@ func (mio *Mod_io) Wdt_set_state(state uint) {
 
 
 // WDT reset
-func (mio *Mod_io) Wdt_reset(state uint) {
-	mio.Send_cmd("PC", "WRS", []uint{})
+func (mio *Mod_io) Wdt_reset(state int) {
+	mio.Send_cmd("PC", "WRS", []int{})
 }
 
 
