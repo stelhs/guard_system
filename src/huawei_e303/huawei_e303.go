@@ -100,10 +100,10 @@ func (m *Modem) send_xml_post_query(query interface{}, url string) (string, erro
 
 	// read POST response 	
 	resp_body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return "", fmt.Errorf("modem read response error: %v\n", err)
 	}
+	defer resp.Body.Close()
 	
 	// Attempt to Parse Error response 	
 	resp_err := new(huawei_e303_err_resp_xml)
