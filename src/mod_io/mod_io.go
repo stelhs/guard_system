@@ -7,6 +7,7 @@ import (
 	"container/list"
 	"sync"
 	"time"
+	"conf"
 //	"fmt"
 )
 
@@ -20,7 +21,7 @@ type Mod_io struct {
 }
 
 
-func New(dev_file string) (*Mod_io, error) {
+func New(iocfg *conf.Io_module_cfg) (*Mod_io, error) {
 	var err error
 	
 	mio := new(Mod_io)
@@ -28,14 +29,16 @@ func New(dev_file string) (*Mod_io, error) {
 	mio.rx = make(chan *nmea0183.Nmea_msg, 16)
 	mio.rx_queue = list.New()
 	
-	mio.dev, err = os.OpenFile(dev_file, os.O_RDWR | os.O_APPEND, 0660)
+	mio.dev, err = os.OpenFile(iocfg.Uart_dev, 
+						os.O_RDWR | os.O_APPEND, 0660)
 	if err != nil {
 		return nil, err
 	}
 	
 	mio.nmea = nmea0183.New()
 	
-	err = exec.Command("bash", "-c", "stty -F" + dev_file + " 9600 raw -echo").Run()
+	err = exec.Command("bash", "-c", "stty -F" + iocfg.Uart_dev + 
+						" " + iocfg.Uart_speed + " raw -echo").Run()
 	if err != nil {
 		return nil, err
 	}

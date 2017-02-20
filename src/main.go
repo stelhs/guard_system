@@ -7,17 +7,19 @@ import (
 	"guard_system"
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
-)
-
-const (
-	DEV_FILE = "/dev/ttyS0"
-	MODEM_IP = "192.168.1.1"
+    "conf"
 )
 
 
 
 func main() {
 	var err error
+	var cfg *conf.Main_config
+	 
+	cfg, err = conf.Conf_parse()
+    if err != nil {
+        panic(fmt.Sprintf("main: can't get configuration: %v", err))
+    }
 	
     db, err := sql.Open("mysql", "root:13941@/guard_system")
     if err != nil {
@@ -25,13 +27,13 @@ func main() {
     }
 	defer db.Close()	
 
-	modem := huawei_e303.New(MODEM_IP)
-	mio, err := mod_io.New(DEV_FILE)
+	modem := huawei_e303.New(&cfg.Modem)
+	mio, err := mod_io.New(&cfg.Io_module)
 	if err != nil {
 		panic(fmt.Sprintf("main: can't create mod_io: %v", err))
 	}
 	
-	gs := guard_system.New(db, mio, modem)
+	gs := guard_system.New(&cfg.Guard_settings, db, mio, modem)
 	if err != nil {
 		panic(fmt.Sprintf("main: can't create guard_system: %v", err))
 	}

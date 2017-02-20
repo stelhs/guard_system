@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"strings"
 	"io/ioutil"
+	"conf"
 )
 
 type Modem struct {
@@ -73,9 +74,9 @@ type Modem_sent_sms_stat struct {
 }
 
 
-func New(ip_addr string) *Modem {
+func New(mcfg *conf.Modem_cfg) *Modem {
 	m := new(Modem)
-	m.ip_addr = ip_addr
+	m.ip_addr = mcfg.Ip_addr
 	return m
 }
 

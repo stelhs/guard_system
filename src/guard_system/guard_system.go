@@ -9,13 +9,10 @@ import (
     "mod_io"
     "huawei_e303"
     "pthread"
+    "conf"
 )
 
 
-const (
-	SIREN_IO_PORT = 3
-	
-)
 
 // Sensor info
 type sensor struct {
@@ -33,6 +30,7 @@ type siren_state struct {
 
 // The main Guard System descriptor
 type Guard_system struct {
+	cfg *conf.Guard_sys_cfg
 	db *sql.DB
 	mio *mod_io.Mod_io
 	sensors_by_port map[int]sensor
@@ -42,12 +40,14 @@ type Guard_system struct {
 
 
 
-func New(db *sql.DB, mio *mod_io.Mod_io, modem *huawei_e303.Modem) *Guard_system {
+func New(cfg *conf.Guard_sys_cfg, db *sql.DB, 
+			mio *mod_io.Mod_io, modem *huawei_e303.Modem) *Guard_system {
     var gs Guard_system
     gs.db = db
     gs.mio = mio
     gs.sensors_by_port = make(map[int]sensor)
     gs.sensors_by_id = make(map[int]sensor)
+    gs.cfg = cfg
     
     // Get all sensors info
 	rows, err := db.Query("SELECT id, name, " +
@@ -218,7 +218,8 @@ func (gs *Guard_system) siren_start(sequencer []siren_state) {
 	gs.siren_stop()
 	thread := pthread.Create(func () {
 		for _, step := range sequencer {
-			gs.Set_relay_state(SIREN_IO_PORT, step.state)
+			fmt.Println("gs.cfg.Siren_io_port = ", gs.cfg.Siren_io_port)
+			gs.Set_relay_state(gs.cfg.Siren_io_port, step.state)
 			if step.interval > 0 {
 				time.Sleep(time.Millisecond * time.Duration(step.interval))
 			}
@@ -237,7 +238,7 @@ func (gs *Guard_system) siren_stop() {
 	}
 	gs.siren_threads = []pthread.Thread{}
 	time.Sleep(time.Millisecond * 10)
-	gs.Set_relay_state(SIREN_IO_PORT, 0)
+	gs.Set_relay_state(gs.cfg.Siren_io_port, 0)
 }
 
 func (gs *Guard_system) Guard_get_state() (string, []int, error) {
